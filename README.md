@@ -1,5 +1,7 @@
 # Decco Home Assistant Blueprints
 
+**Note: You MUST create at least one Sonos alarm in the Sonos app before using these blueprints.**
+
 A collection of powerful Home Assistant automation blueprints for smart home control, including calendar-based lighting, device controllers, and alarm management.
 
 ## 📋 Overview
@@ -37,9 +39,11 @@ This repository contains six automation blueprints designed to enhance your Home
 **File:** `calendar_event_light.yaml`
 
 #### Description
+
 Automatically controls a light's color and brightness based on calendar events. When the light turns on, it checks for matching calendar events and applies corresponding colors and brightness levels.
 
 #### Inputs
+
 - **Calendar Entity** - Calendar to monitor for events
 - **Light Entity** - Target light to control
 - **Offset Minutes** - Time offset to event (positive = after, negative = before)
@@ -55,11 +59,13 @@ Automatically controls a light's color and brightness based on calendar events. 
   - Brightness percentage (1-100%)
 
 #### Use Cases
+
 - Color-code your lighting based on calendar appointments
 - Set different lighting moods for meetings, focus time, or personal events
 - Automatically adjust lighting before events start
 
 #### Example Configuration
+
 ```yaml
 Event Rules:
   - text: "meeting"
@@ -77,46 +83,53 @@ Event Rules:
 Three variants are available for different integration methods:
 
 #### 2a. Magic Cube - deCONZ Integration
+
 **File:** `magic-cube-deconz.yaml`
 
 #### 2b. Magic Cube - Zigbee2MQTT Integration
+
 **File:** `magic-cube-z2m.yaml`
 
 #### 2c. Magic Cube - ZHA Integration
+
 **File:** `magic-cube-zha.yaml`
 
 #### Description
+
 Control lights and media players using an Aqara Magic Cube (MFKZQ01LM). Each side of the cube can control a different entity with multiple gesture-based actions.
 
 #### Supported Gestures
 
 | Gesture | Light Action | Media Player Action |
-|---------|-------------|---------------------|
-| **Rotate 90° / 180°** | Select cube side | Select cube side |
-| **Slide** | Toggle color temperature | Next track |
-| **Shake** | Flash light | Previous track |
-| **Rotate Left/Right** | Decrease/Increase brightness | Decrease/Increase volume |
-| **Double Tap/Knock** | Toggle on/off | Play/Pause |
-| **Fall** | *(Not assigned)* | *(Not assigned)* |
+|---------|-------------|--------------------|
+| Rotate 90° / 180° | Select cube side | Select cube side |
+| Slide | Toggle color temperature | Next track |
+| Shake | Flash light | Previous track |
+| Rotate Left/Right | Decrease/Increase brightness | Decrease/Increase volume |
+| Double Tap/Knock | Toggle on/off | Play/Pause |
+| Fall | (Not assigned) | (Not assigned) |
 
 #### Inputs
+
 - **Magic Cube** - The cube device (integration-specific selector)
 - **Cube Side Input** - Input number helper to store current side (0-5 or 1-6 depending on integration)
-- **Color Temperature Settings**:
+- **Color Temperature Settings:**
   - Cold (153-500 mireds) - Default: 350
-  - Warm (153-500 mireds) - Default: 150  
+  - Warm (153-500 mireds) - Default: 150
   - Warmer (153-500 mireds) - Default: 75
 - **Rotation Sensitivity** - Percentage (1-100%) - Default: 50%
 - **Side 1-6 Entities** - Light or media player for each cube side
 
 #### Prerequisites
-- Create an **Input Number** helper:
-  - Go to **Settings** → **Devices & Services** → **Helpers**
-  - Click **Create Helper** → **Number**
+
+- **Create an Input Number helper:**
+  - Go to Settings → Devices & Services → Helpers
+  - Click Create Helper → Number
   - Min: 0 (or 1 for ZHA), Max: 5 (or 6 for ZHA), Step: 1
   - Name it (e.g., "Magic Cube Side")
 
 #### Use Cases
+
 - Control bedroom lights on one side, living room on another
 - Manage multiple media players by flipping the cube
 - Adjust color temperature by sliding
@@ -129,9 +142,11 @@ Control lights and media players using an Aqara Magic Cube (MFKZQ01LM). Each sid
 **File:** `sonos_alarm.yaml`
 
 #### Description
+
 Automatically sets a Sonos alarm based on the first calendar event in a specified time range. Perfect for dynamic wake-up times that adjust to your schedule.
 
 #### Inputs
+
 - **Media Player** - Sonos media player entity
 - **Schedule Time** - Daily time to check calendar and set alarm
 - **Calendar** - Calendar entity to monitor
@@ -144,6 +159,7 @@ Automatically sets a Sonos alarm based on the first calendar event in a specifie
 - **Person** - Person entity to track home/away status
 
 #### Features
+
 - Searches for calendar events between 8 AM and 12 PM
 - Sets alarm 2 hours before the first event (configurable)
 - Automatically enables alarm when person is home
@@ -152,11 +168,13 @@ Automatically sets a Sonos alarm based on the first calendar event in a specifie
 - Updates alarm time dynamically based on calendar changes
 
 #### Prerequisites
-- Create an **Input Datetime** helper for alarm time
+
+- Create an Input Datetime helper for alarm time
 - Configure a Sonos alarm via the Sonos app first
 - The alarm switch entity will be created automatically by Home Assistant
 
 #### Use Cases
+
 - Wake up 2 hours before your first meeting
 - Automatic alarm adjustment for variable schedules
 - Disable alarms automatically when traveling
@@ -169,9 +187,11 @@ Automatically sets a Sonos alarm based on the first calendar event in a specifie
 **File:** `symfonisk.yaml`
 
 #### Description
+
 Comprehensive controller automation for the IKEA SYMFONISK sound controller. Supports deCONZ, ZHA, and Zigbee2MQTT integrations with customizable actions and looping support.
 
 #### Inputs
+
 - **Integration** - Select deCONZ, ZHA, or Zigbee2MQTT
 - **Controller Device** - Device entity (for deCONZ/ZHA)
 - **Controller Entity** - Sensor entity (for Zigbee2MQTT)
@@ -181,27 +201,31 @@ Comprehensive controller automation for the IKEA SYMFONISK sound controller. Sup
   - Recommended: 100ms if experiencing duplicate events
 
 #### Actions
+
 - **Rotate Left** - Custom action when rotating counterclockwise
 - **Rotate Left Stop** - Action when stopping rotation
-- **Rotate Right** - Custom action when rotating clockwise  
+- **Rotate Right** - Custom action when rotating clockwise
 - **Rotate Right Stop** - Action when stopping rotation
 - **Remote Short Press** - Single button press action
 - **Remote Double Press** - Double button press action
 - **Remote Triple Press** - Triple button press action
 
 #### Advanced Options
+
 - **Rotate Left/Right Loop** - Continuously run action while rotating
 - **Maximum Loop Repeats** - Safety limit (1-5000 repeats)
   - Default: 500
 
 #### Prerequisites
-- Create an **Input Text** helper:
-  - **Settings** → **Devices & Services** → **Helpers**
-  - **Create Helper** → **Text**
+
+- **Create an Input Text helper:**
+  - Settings → Devices & Services → Helpers
+  - Create Helper → Text
   - Max length: 255 characters
   - Name it (e.g., "SYMFONISK Last Event")
 
 #### Use Cases
+
 - Control light brightness by rotation
 - Adjust media player volume
 - Switch scenes with button presses
@@ -209,7 +233,8 @@ Comprehensive controller automation for the IKEA SYMFONISK sound controller. Sup
 - Connect to Hooks for pre-built integrations
 
 #### Additional Resources
-- Part of [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints) project
+
+- Part of [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints/) project
 - [Full Documentation](https://epmatt.github.io/awesome-ha-blueprints/docs/blueprints/controllers/ikea_e1744)
 - [Available Hooks](https://epmatt.github.io/awesome-ha-blueprints/docs/blueprints/controllers/ikea_e1744#available-hooks)
 
@@ -221,30 +246,33 @@ Comprehensive controller automation for the IKEA SYMFONISK sound controller. Sup
 
 Many blueprints require input helpers. To create them:
 
-1. Go to **Settings** → **Devices & Services** → **Helpers**
-2. Click **Create Helper**
+1. Go to Settings → Devices & Services → Helpers
+2. Click Create Helper
 3. Choose the appropriate type:
-   - **Number** - For cube side storage
-   - **Datetime** - For alarm times
-   - **Text** - For storing controller events
+   - Number - For cube side storage
+   - Datetime - For alarm times
+   - Text - For storing controller events
 4. Configure the helper according to blueprint requirements
 5. Use the helper entity ID in your automation
 
 ### Common Issues
 
 #### Magic Cube Not Responding
+
 - Verify the cube is properly paired with your integration
 - Check that the input number helper is created correctly
 - Ensure entities are not unavailable
 - Check Home Assistant logs for errors
 
 #### Calendar Events Not Matching
+
 - Event matching is case-insensitive
 - Match text should be contained in the event summary
 - Check calendar entity is returning events correctly
 - Verify offset minutes are set appropriately
 
 #### SYMFONISK Multiple Triggers
+
 - Increase the debounce delay to 100ms
 - Ensure only one automation uses the same device
 - Check that the input text helper is unique
@@ -285,7 +313,7 @@ These blueprints are provided as-is for use in Home Assistant. The SYMFONISK blu
 
 - [Home Assistant Documentation](https://www.home-assistant.io/docs/)
 - [Blueprint Documentation](https://www.home-assistant.io/docs/automation/using_blueprints/)
-- [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints)
+- [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints/)
 - [Home Assistant Community Forum](https://community.home-assistant.io/)
 
 ---
@@ -293,8 +321,6 @@ These blueprints are provided as-is for use in Home Assistant. The SYMFONISK blu
 ## ⚠️ Disclaimer
 
 These blueprints are community-created and not officially supported by Home Assistant or device manufacturers. Always test automations in a safe environment before deploying to production systems.
-
----
 
 **Last Updated:** October 2025  
 **Repository:** git.decco.net/git/Hass
