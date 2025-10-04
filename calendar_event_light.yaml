@@ -1,0 +1,118 @@
+blueprint:
+  name: Calendar Event Light Controller
+  description: >
+    Control a light's color and brightness based on matching calendar events.
+    Triggers when a selected light turns ON. If event text matches any rule,
+    sets color and brightness accordingly. Otherwise, uses fallback values.
+  domain: automation
+  input:
+    calendar_entity:
+      name: Calendar
+      description: Calendar entity to monitor
+      selector:
+        entity:
+          domain: calendar
+    target_light:
+      name: Light
+      description: Light entity to control
+      selector:
+        entity:
+          domain: light
+    offset_minutes:
+      name: Minutes offset to event (positive is after, negative before)
+      default: 0
+      selector:
+        number:
+          min: -1440
+          max: 1440
+          step: 1
+          unit_of_measurement: "min"
+          mode: box
+    no_event_brightness:
+      name: Brightness when no event (%)
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+    no_event_color:
+      name: Color when no event
+      default: [255, 255, 255]
+      selector:
+        color_rgb: {}
+    event_rules:
+      name: Event Matching Rules
+      description: >
+        Add rules to match calendar event text.
+        Each rule sets color and brightness for events that match.
+      default: []
+      selector:
+        object:
+          multiple: true
+          fields:
+            text:
+              selector:
+                text: {}
+            color:
+              selector:
+                color_rgb: {}
+            brightness:
+              selector:
+                number:
+                  min: 1
+                  max: 100
+                  step: 1
+                  unit_of_measurement: "%"
+
+mode: single
+
+trigger:
+  - platform: state
+    entity_id: !input target_light
+    to: "on"
+
+variables:
+  rules: !input event_rules
+  calendar_id: !input calendar_entity
+  offset: !input offset_minutes
+  start_time: "{{ (now() + timedelta(minutes=offset)).isoformat() }}"
+  end_time: "{{ (now() + timedelta(days=1)).isoformat() }}"
+
+action:
+  - alias: Get upcoming events
+    service: calendar.get_events
+    data:
+      entity_id: "{{ calendar_id }}"
+      start_time: "{{ start_time }}"
+      end_time: "{{ end_time }}"
+    response_variable: calendar_response
+
+  - alias: Find matching calendar event and rule
+    variables:
+      found_event: >
+        {{
+          calendar_response['events'] | selectattr('summary', 'defined') | list | first(default=None)
+        }}
+      found_text: >
+        {{ found_event.summary if found_event is not none and 'summary' in found_event else '' }}
+      matched_rule: >
+        {{ rules | selectattr('text', 'in', found_text | lower) | list | first(default=None) }}
+
+  - choose:
+      - conditions: "{{ matched_rule is not none }}"
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: !input target_light
+            data:
+              brightness_pct: "{{ matched_rule.brightness }}"
+              rgb_color: "{{ matched_rule.color }}"
+    default:
+      - service: light.turn_on
+        target:
+          entity_id: !input target_light
+        data:
+          brightness_pct: !input no_event_brightness
+          rgb_color: !input no_event_color

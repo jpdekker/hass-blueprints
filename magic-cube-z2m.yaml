@@ -1,0 +1,227 @@
+blueprint:
+  name: Zigbee2MQTT - Aqara Cube (MFKZQ01LM)
+  description: |
+    Control lights & media with Aqara Cube via Zigbee2MQTT.
+
+    Supported actions:
+    - flip90 / flip180 → select side
+    - slide → change color temp or next track
+    - shake → flash or previous track
+    - rotate → brightness/volume adjust
+    - tap / double_tap → toggle or play/pause
+
+  domain: automation
+  input:
+    mqtt_topic:
+      name: MQTT Topic
+      description: Zigbee2MQTT topic of the Aqara Cube (e.g., zigbee2mqtt/Cube)
+      selector:
+        text:
+
+    cube_side:
+      name: Input helper for cube side
+      default: ""
+      selector:
+        entity:
+          domain: input_number
+
+    cold:
+      name: Cold color temp
+      default: 350
+      selector:
+        number:
+          min: 153
+          max: 500
+    warm:
+      name: Warm color temp
+      default: 150
+      selector:
+        number:
+          min: 153
+          max: 500
+    warmer:
+      name: Warmer color temp
+      default: 75
+      selector:
+        number:
+          min: 153
+          max: 500
+    rotate:
+      name: Rotation sensitivity %
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 100
+
+    side1:
+      name: Entity for side 0
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+    side2:
+      name: Entity for side 1
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+    side3:
+      name: Entity for side 2
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+    side4:
+      name: Entity for side 3
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+    side5:
+      name: Entity for side 4
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+    side6:
+      name: Entity for side 5
+      default: ""
+      selector:
+        entity:
+          domain: [light, media_player]
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: mqtt
+    topic: !input mqtt_topic
+
+variables:
+  cube_side_id: !input cube_side
+  payload: "{{ trigger.payload | from_json }}"
+  action: "{{ payload.action | default('') }}"
+  side_value: "{{ payload.side | default(states(cube_side_id) | int(0)) }}"
+  side: "{{ side_value | int }}"
+  things:
+    - !input side1
+    - !input side2
+    - !input side3
+    - !input side4
+    - !input side5
+    - !input side6
+  thing: "{{ things[side] if side >= 0 and side < 6 else '' }}"
+  warmer: !input warmer
+  warm: !input warm
+  cold: !input cold
+  speed: !input rotate
+
+action:
+  - choose:
+      - conditions: "{{ action in ['flip90', 'flip180'] }}"
+        sequence:
+          - service: input_number.set_value
+            data:
+              value: "{{ side_value }}"
+            target:
+              entity_id: !input cube_side
+
+      - conditions:
+          - "{{ action == 'shake' }}"
+          - "{{ thing != '' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ thing.split('.')[0] == 'light' }}"
+                sequence:
+                  - service: light.turn_on
+                    data:
+                      flash: short
+                    target:
+                      entity_id: "{{ thing }}"
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'media_player' }}"
+                  - "{{ states(thing) == 'playing' }}"
+                sequence:
+                  - service: media_player.media_previous_track
+                    target:
+                      entity_id: "{{ thing }}"
+
+      - conditions:
+          - "{{ action == 'slide' }}"
+          - "{{ thing != '' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'light' }}"
+                  - "{{ states(thing) == 'on' }}"
+                sequence:
+                  - choose:
+                      - conditions: "{{ state_attr(thing, 'color_temp') == warm }}"
+                        sequence:
+                          - service: light.turn_on
+                            data:
+                              color_temp: "{{ warmer }}"
+                            target:
+                              entity_id: "{{ thing }}"
+                      - conditions: "{{ state_attr(thing, 'color_temp') == warmer }}"
+                        sequence:
+                          - service: light.turn_on
+                            data:
+                              color_temp: "{{ cold }}"
+                            target:
+                              entity_id: "{{ thing }}"
+                    default:
+                      - service: light.turn_on
+                        data:
+                          color_temp: "{{ warm }}"
+                        target:
+                          entity_id: "{{ thing }}"
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'media_player' }}"
+                  - "{{ states(thing) == 'playing' }}"
+                sequence:
+                  - service: media_player.media_next_track
+                    target:
+                      entity_id: "{{ thing }}"
+
+      - conditions:
+          - "{{ action in ['rotate_left', 'rotate_right'] }}"
+          - "{{ thing != '' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ thing.split('.')[0] == 'light' }}"
+                sequence:
+                  - service: light.turn_on
+                    data:
+                      brightness_step_pct: >
+                        {{ (payload.angle | float) * (speed | float / 100) }}
+                    target:
+                      entity_id: "{{ thing }}"
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'media_player' }}"
+                  - "{{ states(thing) == 'playing' }}"
+                sequence:
+                  - service: media_player.volume_set
+                    data:
+                      volume_level: >
+                        {{ [[(state_attr(thing, 'volume_level') | float) + (payload.angle | float) * (speed | float / 40000), 1 ] | min, 0 ] | max }}
+                    target:
+                      entity_id: "{{ thing }}"
+
+      - conditions:
+          - "{{ action in ['tap', 'double_tap'] }}"
+          - "{{ thing != '' }}"
+        sequence:
+          - choose:
+              - conditions: "{{ thing.split('.')[0] == 'light' }}"
+                sequence:
+                  - service: light.toggle
+                    target:
+                      entity_id: "{{ thing }}"
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'media_player' }}"
+                sequence:
+                  - service: media_player.media_play_pause
+                    target:
+                      entity_id: "{{ thing }}"

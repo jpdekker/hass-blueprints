@@ -1,0 +1,164 @@
+blueprint:
+  name: Wake Up Alarm for Calendar Event
+  description: >-
+    Sets an alarm based on the first calendar event within a specific time range
+    and triggers a Sonos alarm.
+  domain: automation
+  input:
+    media_player:
+      name: Media Player
+      description: The Sonos media player to configure the alarm.
+      selector:
+        entity:
+          domain: media_player
+    schedule:
+      name: Schedule time
+      description: Time Schedule for event
+      selector:
+        time: {}
+    calendar:
+      name: Calendar
+      description: The calendar to fetch events from.
+      selector:
+        entity:
+          domain: calendar
+    alarm_switch:
+      name: Sonos Alarm Switch
+      description: The Sonos alarm switch to update.
+      selector:
+        entity:
+          domain: switch
+    alarm_time:
+      name: Input Datetime
+      description: The input datetime entity for the alarm time.
+      selector:
+        entity:
+          domain: input_datetime
+    offset_timedelta:
+      name: Offset Timedelta
+      description: Time before the event to trigger the alarm (in HH:MM:SS format).
+      default: "02:00:00"
+      selector:
+        text:
+          multiline: false
+    light:
+      name: Light
+      description: The light to turn on at the time of the alarm.
+      selector:
+        entity:
+          domain: light
+    person:
+      name: Person
+      description: The person to track for enabling/disabling the alarm.
+      selector:
+        entity:
+          domain: person
+  source_url: https://community.home-assistant.io/
+
+variables:
+    offset_timedelta: !input offset_timedelta
+    alarm_switch: !input alarm_switch
+    alarm_time: !input alarm_time
+    person: !input person
+    light: !input light
+
+trigger:
+  - platform: time
+    at: !input schedule
+  - platform: state
+    entity_id: !input alarm_time
+  - platform: state
+    entity_id: !input alarm_switch
+    from: "on"
+    to: "off"
+  - platform: state
+    entity_id: !input person
+    from: "not_home"
+    to: "home"
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.platform == 'state' and trigger.entity_id == alarm_time }}"
+        sequence:
+          - service: sonos.update_alarm
+            target:
+              entity_id: !input media_player
+            data:
+              alarm_id: "{{ state_attr(alarm_switch, 'alarm_id') }}"
+              time: "{{ states(alarm_time) }}"
+              enabled: "{{ is_state(person, 'home') }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ (now() + timedelta(minutes=3)).strftime('%H:%M:00') == state_attr(alarm_switch, 'time') and trigger.platform == 'state' and trigger.entity_id == alarm_switch }}"
+        sequence:
+          - service: light.turn_on
+            data:
+              transition: 180
+            target:
+              entity_id: !input light
+      - conditions:
+          - condition: state
+            entity_id: !input person
+            state: "not_home"
+        sequence:
+          - service: sonos.update_alarm
+            target:
+              entity_id: !input media_player
+            data:
+              alarm_id: "{{ state_attr(alarm_switch, 'alarm_id') }}"
+              enabled: false
+      - conditions:
+          - condition: template
+            value_template: >-
+              {{ trigger.platform == 'time' or 
+                 (trigger.platform == 'state' and trigger.to_state.state == 'home' and trigger.entity_id == person) }}
+        sequence:
+          - service: calendar.get_events
+            target:
+              entity_id: !input calendar
+            data:
+              start_date_time: "{{ (now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat() }}"
+              end_date_time: "{{ (now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=2)).isoformat() }}"
+            response_variable: calendar_events
+          - variables:
+              offset_seconds: >-
+                {% set hours, minutes, seconds = offset_timedelta.split(':') | map('int') %}
+                {{ hours * 3600 + minutes * 60 + seconds }}
+              calendar_id: !input calendar
+              events: >-
+                {{ calendar_events[calendar_id].events if calendar_id in calendar_events else [] }}
+              first_valid_event: >-
+                {% for event in events %}
+                  {% set event_start = as_datetime(event.start) %}
+                  {% if event_start and 8 <= event_start.hour <= 12 %}
+                    {{ event }}
+                    {% break %}
+                  {% endif %}
+                {% endfor %}
+
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ first_valid_event != '' }}"
+                sequence:
+                  - service: input_datetime.set_datetime
+                    target:
+                      entity_id: !input alarm_time
+                    data:
+                      time: >-
+                        {% set alarm_time = as_timestamp(first_valid_event.start) - offset_seconds %}
+                        {{ alarm_time | timestamp_custom('%H:%M:%S') }}
+                  - service: sonos.update_alarm
+                    target:
+                      entity_id: !input media_player
+                    data:
+                      alarm_id: "{{ state_attr(alarm_switch, 'alarm_id') }}"
+                      time: "{{ states(alarm_time) }}"
+                      enabled: "{{ is_state(person, 'home') }}"
+                  
+
+mode: single
