@@ -1,6 +1,6 @@
 # Decco Home Assistant Blueprints
 
-**Note: You MUST create at least one Sonos alarm in the Sonos app before using these blueprints.**
+**Note: For the Sonos Wake Up Alarm blueprint, you MUST create at least one Sonos alarm in the Sonos app before using it.**
 
 A collection of powerful Home Assistant automation blueprints for smart home control, including calendar-based lighting, device controllers, and alarm management.
 
@@ -101,7 +101,7 @@ Control lights and media players using an Aqara Magic Cube (MFKZQ01LM). Each sid
 #### Supported Gestures
 
 | Gesture | Light Action | Media Player Action |
-|---------|-------------|--------------------|
+|---------|--------------|---------------------|
 | Rotate 90° / 180° | Select cube side | Select cube side |
 | Slide | Toggle color temperature | Next track |
 | Shake | Flash light | Previous track |
@@ -234,7 +234,7 @@ Comprehensive controller automation for the IKEA SYMFONISK sound controller. Sup
 
 #### Additional Resources
 
-- Part of [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints/) project
+- Part of [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints) project
 - [Full Documentation](https://epmatt.github.io/awesome-ha-blueprints/docs/blueprints/controllers/ikea_e1744)
 - [Available Hooks](https://epmatt.github.io/awesome-ha-blueprints/docs/blueprints/controllers/ikea_e1744#available-hooks)
 
@@ -249,9 +249,9 @@ Many blueprints require input helpers. To create them:
 1. Go to Settings → Devices & Services → Helpers
 2. Click Create Helper
 3. Choose the appropriate type:
-   - Number - For cube side storage
-   - Datetime - For alarm times
-   - Text - For storing controller events
+   - **Number** - For cube side storage
+   - **Datetime** - For alarm times
+   - **Text** - For storing controller events
 4. Configure the helper according to blueprint requirements
 5. Use the helper entity ID in your automation
 
@@ -282,7 +282,7 @@ Many blueprints require input helpers. To create them:
 ## 📝 Blueprint Comparison
 
 | Blueprint | Difficulty | Integrations | Requires Helpers |
-|-----------|-----------|--------------|------------------|
+|-----------|------------|--------------|------------------|
 | Calendar Event Light | Easy | Any | No |
 | Magic Cube (deCONZ) | Medium | deCONZ | Yes (Number) |
 | Magic Cube (Z2M) | Medium | Zigbee2MQTT | Yes (Number) |
@@ -313,7 +313,7 @@ These blueprints are provided as-is for use in Home Assistant. The SYMFONISK blu
 
 - [Home Assistant Documentation](https://www.home-assistant.io/docs/)
 - [Blueprint Documentation](https://www.home-assistant.io/docs/automation/using_blueprints/)
-- [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints/)
+- [Awesome HA Blueprints](https://epmatt.github.io/awesome-ha-blueprints)
 - [Home Assistant Community Forum](https://community.home-assistant.io/)
 
 ---
