@@ -1,141 +1,126 @@
-blueprint for the cube:
 blueprint:
-  name: ZHA - Aqara Cube
-  description: "Control light & sound with Aqara Cube (ZHA Integration)
-
-    - Rotate 90 & 180: to choose the side
-
-    - Slide: Player next song/ light toggle temperature
-
-    - Rotate Left & Right: Volume/Light increase and decrease
-
-    - Shake: Player previous song / light will flash
-
-    - Double Tab:  Toggle on/off
-
-    - Fall:  Hmmm not sure yet
-
-    ---
-    * Create number input for storing the side selection (Device & Integration helper tab)"
+  name: ZHA - Aqara Cube (MFKZQ01LM)
+  description: |
+    Control lights & media with Aqara Cube via ZHA.
+    Supported actions:
+    - flip → select side
+    - slide → change color temp or next track
+    - shake → flash or previous track
+    - rotate → brightness/volume adjust
+    - knock → toggle or play/pause
   domain: automation
   input:
     remote:
       name: Magic Cube
-      description: Mi Magic Cube
+      description: Aqara Magic Cube device
       selector:
         device:
           integration: zha
           manufacturer: LUMI
     cube_side:
-      name: Input parameter for cube side
-      description: Input Variable to store the cube side
-      default: []
+      name: Input helper for cube side
+      default: ""
       selector:
         entity:
           domain: input_number
     cold:
-      name: Temperature cold light
-      default: [350]
+      name: Cold color temp
+      default: 350
       selector:
         number:
           min: 153
           max: 500
     warm:
-      name: Temperature warm light
-      default: [150]
+      name: Warm color temp
+      default: 150
       selector:
         number:
           min: 153
           max: 500
     warmer:
-      name: Temperature warmer light
-      default: [75]
+      name: Warmer color temp
+      default: 75
       selector:
         number:
           min: 153
           max: 500
     rotate:
-      name: Rotation Sensitivity
-      default: [50.0]
+      name: Rotation sensitivity %
+      default: 50
       selector:
         number:
           min: 1
           max: 100
     side1:
-      name: Entity for side 1 (Aqara logo up)
-      default: []
+      name: Entity for side 1
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
     side2:
       name: Entity for side 2
-      default: []
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
     side3:
       name: Entity for side 3
-      default: []
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
     side4:
       name: Entity for side 4
-      default: []
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
     side5:
       name: Entity for side 5
-      default: []
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
     side6:
       name: Entity for side 6
-      default: []
+      default: ""
       selector:
         entity:
-          domain:
-            - light
-            - media_player
+          domain: [light, media_player]
 mode: restart
 max_exceeded: silent
 trigger:
   - platform: event
     event_type: zha_event
     event_data:
-      device_id: !input "remote"
+      device_id: !input remote
+variables:
+  cube_side_id: !input cube_side
+  command: "{{ trigger.event.data.command }}"
+  args: "{{ trigger.event.data.args }}"
+  side_value: "{{ args.activated_face | int(0) if command == 'flip' else states(cube_side_id) | int(0) }}"
+  side: "{{ side_value | int }}"
+  things:
+    - !input side1
+    - !input side2
+    - !input side3
+    - !input side4
+    - !input side5
+    - !input side6
+  thing: "{{ things[side - 1] if side >= 1 and side <= 6 else '' }}"
+  warmer: !input warmer
+  warm: !input warm
+  cold: !input cold
+  speed: !input rotate
 action:
-  - variables:
-      command: "{{ trigger.event.data.command }}"
-      args: "{{ trigger.event.data.args }}"
-      cube_side: !input "cube_side"
-      side: "{{ states(cube_side) | int }}"
-      things:
-        - !input "side1"
-        - !input "side2"
-        - !input "side3"
-        - !input "side4"
-        - !input "side5"
-        - !input "side6"
-      thing: "{{ things[side - 1] }}"
-      warmer: !input "warmer"
-      warm: !input "warm"
-      cold: !input "cold"
-      speed: !input "rotate"
-
   - choose:
+      - conditions: "{{ command == 'flip' }}"
+        sequence:
+          - service: input_number.set_value
+            data:
+              value: "{{ side_value }}"
+            target:
+              entity_id: !input cube_side
       - conditions:
           - "{{ command == 'shake' }}"
           - "{{ thing != '' }}"
@@ -155,16 +140,6 @@ action:
                   - service: media_player.media_previous_track
                     target:
                       entity_id: "{{ thing }}"
-
-      - conditions:
-          - "{{ command == 'flip' }}"
-        sequence:
-          - service: input_number.set_value
-            data:
-              value: "{{ args.activated_face | int(0) }}"
-            target:
-              entity_id: "{{ cube_side }}"
-
       - conditions:
           - "{{ command == 'slide' }}"
           - "{{ thing != '' }}"
@@ -174,27 +149,27 @@ action:
                   - "{{ thing.split('.')[0] == 'light' }}"
                   - "{{ states(thing) == 'on' }}"
                 sequence:
-                  choose:
-                    - conditions: "{{ state_attr(thing, 'color_temp') == warm }}"
-                      sequence:
-                        - service: light.turn_on
-                          data:
-                            color_temp: "{{ warmer }}"
-                          target:
-                            entity_id: "{{ thing }}"
-                    - conditions: "{{ state_attr(thing, 'color_temp') == warmer }}"
-                      sequence:
-                        - service: light.turn_on
-                          data:
-                            color_temp: "{{ cold }}"
-                          target:
-                            entity_id: "{{ thing }}"
-                  default:
-                    - service: light.turn_on
-                      data:
-                        color_temp: "{{ warm }}"
-                      target:
-                        entity_id: "{{ thing }}"
+                  - choose:
+                      - conditions: "{{ state_attr(thing, 'color_temp') == warm }}"
+                        sequence:
+                          - service: light.turn_on
+                            data:
+                              color_temp: "{{ warmer }}"
+                            target:
+                              entity_id: "{{ thing }}"
+                      - conditions: "{{ state_attr(thing, 'color_temp') == warmer }}"
+                        sequence:
+                          - service: light.turn_on
+                            data:
+                              color_temp: "{{ cold }}"
+                            target:
+                              entity_id: "{{ thing }}"
+                    default:
+                      - service: light.turn_on
+                        data:
+                          color_temp: "{{ warm }}"
+                        target:
+                          entity_id: "{{ thing }}"
               - conditions:
                   - "{{ thing.split('.')[0] == 'media_player' }}"
                   - "{{ states(thing) == 'playing' }}"
@@ -202,9 +177,8 @@ action:
                   - service: media_player.media_next_track
                     target:
                       entity_id: "{{ thing }}"
-
       - conditions:
-          - "{{ command == 'rotate_left' or command == 'rotate_right' }}"
+          - "{{ command in ['rotate_left', 'rotate_right'] }}"
           - "{{ thing != '' }}"
         sequence:
           - choose:
@@ -223,10 +197,9 @@ action:
                   - service: media_player.volume_set
                     data:
                       volume_level: >
-                        {{ [[(state_attr(thing, 'volume_level') | float) + (args.relative_degrees | float) * (speed | float / 40000) , 1 ] | min , 0 ] | max }}
+                        {{ [[(state_attr(thing, 'volume_level') | float) + (args.relative_degrees | float) * (speed | float / 40000), 1] | min, 0] | max }}
                     target:
                       entity_id: "{{ thing }}"
-
       - conditions:
           - "{{ command == 'knock' }}"
           - "{{ thing != '' }}"
@@ -237,7 +210,8 @@ action:
                   - service: light.toggle
                     target:
                       entity_id: "{{ thing }}"
-              - conditions: "{{ thing.split('.')[0] == 'media_player' }}"
+              - conditions:
+                  - "{{ thing.split('.')[0] == 'media_player' }}"
                 sequence:
                   - service: media_player.media_play_pause
                     target:
